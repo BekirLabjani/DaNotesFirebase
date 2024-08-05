@@ -49,10 +49,12 @@ var NoteListService = /** @class */ (function () {
     function NoteListService() {
         this.trashNotes = [];
         this.normalNotes = [];
+        this.normalMarkedNotes = [];
         // unsubSingle;
         this.firestore = core_1.inject(firestore_1.Firestore);
         this.unsubTrash = this.subTrashList();
         this.unsubNotes = this.subNotesList();
+        this.unsubMarkedNotes = this.subMarkedNotesList();
         // this.items$ = collectionData(this.getNoteRef());
         // this.items = this.items$.subscribe((list) => {
         //   list.forEach(element => {
@@ -79,9 +81,25 @@ var NoteListService = /** @class */ (function () {
     };
     NoteListService.prototype.addNote = function (item, colId) {
         return __awaiter(this, void 0, void 0, function () {
+            var refFunction;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, firestore_1.addDoc(this.getNoteRef(), item)["catch"](function (err) { console.error(err); }).then(function (docRef) { console.log("Document written with ID: ", docRef === null || docRef === void 0 ? void 0 : docRef.id); })];
+                    case 0:
+                        if (colId == 'notes') {
+                            refFunction = this.getNoteRef(); //wenn die collection id notes ist in notes speichern
+                        }
+                        else if (colId == 'trash') {
+                            refFunction = this.getTrashRef(); //wenn die collection id trash ist in trash speichern
+                        }
+                        return [4 /*yield*/, firestore_1.addDoc(refFunction, item) //hier fügen wir der Datenbank den Inhalt welcher beim Aufruf der Funktion übergeben hinzu
+                            ["catch"](function (err) {
+                                //hier legen wir fest wenn etwas nicht funktioniert wie er vorgehen soll
+                                console.error(err);
+                            })
+                                .then(function (docRef) {
+                                //zusätzlich logen wir die id in der Console
+                                console.log('Document written with ID:', docRef === null || docRef === void 0 ? void 0 : docRef.id);
+                            })];
                     case 1:
                         _a.sent();
                         return [2 /*return*/];
@@ -120,6 +138,7 @@ var NoteListService = /** @class */ (function () {
     NoteListService.prototype.ngOnDestroy = function () {
         this.unsubTrash();
         this.unsubNotes();
+        this.unsubMarkedNotes;
     };
     NoteListService.prototype.setNoteObject = function (obj, id) {
         return {
@@ -141,11 +160,24 @@ var NoteListService = /** @class */ (function () {
     };
     NoteListService.prototype.subNotesList = function () {
         var _this = this;
-        return firestore_1.onSnapshot(this.getNoteRef(), function (snapList) {
+        var ref = firestore_1.collection(firestore_1.doc(firestore_1.collection(this.firestore, 'notes'), 'nVuoAXZVEX9ThiJnYAcl'), 'notesExtra');
+        var q = firestore_1.query(ref, firestore_1.orderBy('title'), firestore_1.limit(100));
+        return firestore_1.onSnapshot(q, function (snapList) {
             _this.normalNotes = [];
             snapList.forEach(function (ele) {
                 _this.normalNotes.push(_this.setNoteObject(ele.data(), ele.id));
             });
+            // snapList.docChanges().forEach((change) => {
+            //   if (change.type === "added") {
+            //       console.log("New note: ", change.doc.data());
+            //   }
+            //   if (change.type === "modified") {
+            //       console.log("Modified note: ", change.doc.data());
+            //   }
+            //   if (change.type === "removed") {
+            //       console.log("Removed note: ", change.doc.data());
+            //   }
+            // });
         });
     };
     NoteListService.prototype.getSingleDocRef = function (colId, docId) {
@@ -156,6 +188,16 @@ var NoteListService = /** @class */ (function () {
     };
     NoteListService.prototype.getTrashRef = function () {
         return firestore_1.collection(this.firestore, 'trash');
+    };
+    NoteListService.prototype.subMarkedNotesList = function () {
+        var _this = this;
+        var q = firestore_1.query(this.getNoteRef(), firestore_1.where("marked", "==", true), firestore_1.limit(100));
+        return firestore_1.onSnapshot(q, function (list) {
+            _this.normalMarkedNotes = [];
+            list.forEach(function (element) {
+                _this.normalMarkedNotes.push(_this.setNoteObject(element.data(), element.id));
+            });
+        });
     };
     NoteListService = __decorate([
         core_1.Injectable({

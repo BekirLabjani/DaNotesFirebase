@@ -15,25 +15,32 @@ var NoteListComponent = /** @class */ (function () {
     function NoteListComponent(noteService) {
         this.noteService = noteService;
         this.noteList = [];
-        this.favFilter = "all";
-        this.status = "notes";
+        this.favFilter = 'all';
+        this.status = 'notes';
     }
-    NoteListComponent.prototype.getList = function () {
-        return this.noteService.normalNotes;
-    };
-    NoteListComponent.prototype.trathList = function () {
-        return this.noteService.trashNotes;
-    };
     NoteListComponent.prototype.changeFavFilter = function (filter) {
         this.favFilter = filter;
     };
-    NoteListComponent.prototype.changeTrashStatus = function () {
-        if (this.status == "trash") {
-            this.status = "notes";
+    NoteListComponent.prototype.getList = function () {
+        if (this.status == 'notes') {
+            if (this.favFilter == 'all') {
+                return this.noteService.normalNotes;
+            }
+            else {
+                return this.noteService.normalMarkedNotes;
+            }
         }
         else {
-            this.status = "trash";
-            this.favFilter = "all";
+            return this.noteService.trashNotes;
+        }
+    };
+    NoteListComponent.prototype.changeTrashStatus = function () {
+        if (this.status == 'trash') {
+            this.status = 'notes';
+        }
+        else {
+            this.status = 'trash';
+            this.favFilter = 'all';
         }
         console.log('test');
     };

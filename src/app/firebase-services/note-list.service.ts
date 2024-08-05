@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Note } from '../interfaces/note.interface';
-import { Firestore, collection, doc, onSnapshot,addDoc,updateDoc, deleteDoc } from '@angular/fire/firestore';
+import { Firestore, collection, doc, onSnapshot,addDoc,updateDoc, deleteDoc, limit, orderBy,query,where } from '@angular/fire/firestore';
+
 
 @Injectable({
   providedIn: 'root'
@@ -9,9 +10,11 @@ export class NoteListService {
 
   trashNotes: Note[] = [];
   normalNotes: Note[] = [];
+  normalMarkedNotes: Note[] = [];
 
   unsubTrash;
   unsubNotes;
+  unsubMarkedNotes;
   // unsubSingle;
  
 
@@ -20,6 +23,7 @@ export class NoteListService {
   constructor() {
     this.unsubTrash = this.subTrashList();
     this.unsubNotes = this.subNotesList();
+    this.unsubMarkedNotes = this.subMarkedNotesList();
 
 
     // this.items$ = collectionData(this.getNoteRef());
@@ -39,13 +43,22 @@ export class NoteListService {
    }
   }
 
-
-  async addNote(item: Note, colId : 'notes'|'trash'){
-    await addDoc(this.getNoteRef(), item).catch (
-      (err) => {console.error(err)}
-    ).then(
-      (docRef) => {console.log("Document written with ID: ", docRef?.id)}
-    )
+  async addNote(item: Note, colId: 'notes' | 'trash') {
+    let refFunction: any;
+    if (colId == 'notes') {
+      refFunction = this.getNoteRef(); //wenn die collection id notes ist in notes speichern
+    } else if (colId == 'trash') {
+      refFunction = this.getTrashRef(); //wenn die collection id trash ist in trash speichern
+    }
+    await addDoc(refFunction, item) //hier fügen wir der Datenbank den Inhalt welcher beim Aufruf der Funktion übergeben hinzu
+      .catch((err) => {
+        //hier legen wir fest wenn etwas nicht funktioniert wie er vorgehen soll
+        console.error(err);
+      })
+      .then((docRef) => {
+        //zusätzlich logen wir die id in der Console
+        console.log('Document written with ID:', docRef?.id);
+      });
   }
 
   
@@ -75,6 +88,7 @@ getColIdFromNote(note: Note){
  ngOnDestroy(){
    this.unsubTrash();
    this.unsubNotes();
+   this.unsubMarkedNotes;
  
  }
 
@@ -98,13 +112,28 @@ subTrashList() {
 }
 
 subNotesList() {
-  return onSnapshot(this.getNoteRef(), (snapList) => {
+  let ref = collection(doc(collection(this.firestore,'notes'), 'nVuoAXZVEX9ThiJnYAcl'), 'notesExtra' ) ;
+  const q = query(ref,orderBy('title'), limit(100));
+  return onSnapshot(q, (snapList) => {
     this.normalNotes = []
     snapList.forEach(ele => {
       this.normalNotes.push(this.setNoteObject(ele.data(),ele.id));
-    })
+    });
+    // snapList.docChanges().forEach((change) => {
+    //   if (change.type === "added") {
+    //       console.log("New note: ", change.doc.data());
+    //   }
+    //   if (change.type === "modified") {
+    //       console.log("Modified note: ", change.doc.data());
+    //   }
+    //   if (change.type === "removed") {
+    //       console.log("Removed note: ", change.doc.data());
+    //   }
+    // });
   });
+  
 }
+
 
 
 
@@ -122,4 +151,14 @@ subNotesList() {
 getTrashRef() {
   return collection(this.firestore, 'trash');
 }
+subMarkedNotesList() {
+  const q = query(this.getNoteRef(), where("marked", "==", true), limit(100));
+  return onSnapshot(q, (list) => {                                          
+    this.normalMarkedNotes = [];
+    list.forEach((element) => {
+      this.normalMarkedNotes.push(this.setNoteObject(element.data(), element.id));
+    });
+  });
+}
+
 }
